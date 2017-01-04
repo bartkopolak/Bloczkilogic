@@ -3,10 +3,17 @@ package thingy;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 
 public class Bloczek {
 
@@ -26,39 +33,59 @@ public class Bloczek {
 	 */
 	
 	
-	private int x;
-	private int y;
-	private Dimension canvasSize;
-	private String name;
-	private Color color;
-	private Color origColor;
-	private boolean mouseIn;
-	private boolean dragged;
-	private boolean selected;
-	private Point StartPos;
+	protected int x;
+	protected int y;
+	protected Dimension canvasSize;
+	protected String name;
+	protected Color color;
+	protected Color origColor;
+	protected boolean mouseIn;
+	protected boolean dragged;
+	protected boolean selected;
+	protected Point StartPos;
+	protected Image image;
 	static int iloscBloczkuf = 0;
-	int width;
-	int height;
+	protected String ID;
+	protected int width;
+	protected int height;
+	public List<Pin> pinList = new ArrayList<Pin>();
 	
-	public Bloczek(Dimension cSize){
+	
+	public Bloczek(Dimension cSize, List<Bloczek> list){
 		x = 0;
 		y = 0;
 		StartPos = new Point(x,y);
 		canvasSize = cSize;
 		width= 50;
 		height = 30;
-		name = "Bloczek_jakis_tam nr " + iloscBloczkuf;
+		name = "Bloczek " + iloscBloczkuf;
 		color = Color.RED;
 		origColor = color;
 		dragged = false;
 		mouseIn = false;
+		File iconsrc = new File("img/def.png");
+		try {
+			image = ImageIO.read(iconsrc);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			image = new BufferedImage(50,30,BufferedImage.TYPE_INT_RGB);
+		}
+		ID = "" + iloscBloczkuf;
 		iloscBloczkuf++;
-		
+		list.add(this);
 		
 	}
 	
-	
-	
+	public String getID() {
+		return ID;
+	}
+
+	public Image getImage() {
+		return image;
+	}
+
+
+
 	public int getWidth() {
 		return width;
 	}
@@ -87,17 +114,23 @@ public class Bloczek {
 		return x;
 	}
 	public synchronized void setX(int x) {
-		if(x>=0 && x <= canvasSize.getWidth()-width-1)
+		if(x>=0 )
 			this.x = x;
-		if(x > canvasSize.getWidth()-width-1) x = StartPos.x;
+		for(Pin p:pinList)
+			p.setX(x + p.pinPosX);
+			
+		
+		//if(x > canvasSize.getWidth()-width-1) x = StartPos.x;
 	}
 	public int getY() {
 		return y;
 	}
 	public synchronized void setY(int y) {
-		if(y>=0 && y<=canvasSize.getHeight()-height-1)
+		if(y>=0 )
 			this.y = y;
-		if(x > canvasSize.getWidth()-width-1) y = StartPos.y;
+		for(Pin p:pinList)
+			p.setY(y + p.pinPosY);
+		//if(x > canvasSize.getWidth()-width-1) y = StartPos.y;
 	}
 	public String getName() {
 		return name;
@@ -165,6 +198,12 @@ public class Bloczek {
 		this.selected = selected;
 	}
 	
+	@Override
+	public String toString(){
+		String s = ID+": " + this.name +", type: " +this.getClass().getName();
+		return s;
+	}
+	
 	public static class BloczekListMethods{
 		
 		BloczekListMethods(){
@@ -176,7 +215,12 @@ public class Bloczek {
 		 * @return bloczek
 		 */
 		public static Bloczek getBlockUnderMouse(List<Bloczek> listaBloczkuf){
+			//poniewaz piny znajduja sie wewnatz bloczkow, piny sa tworzone po rodzicu, 
+			//a funkcja ta zwraca pierwszy bloczek, to najpierw sprawdz, czy pod kursorem nie ma pinu
+			Pin pin;
 			for(Bloczek b : listaBloczkuf){
+				if((pin = Pin.getSelectedPin(b.pinList)) != null)
+					return pin;
 				if(b.isMouseIn()) return b;
 			}
 			return null;
@@ -234,6 +278,27 @@ public class Bloczek {
 				b.DeHighlight();
 			}
 			
+		}
+		/**
+		 * Odznacza wszystkie bloczki podanej klasy
+		 * @param lista
+		 * @param className - klasa bloczkow do odznaczenia
+		 */
+		public static void deselectOnlyOneType(List<Bloczek> lista, Class<?> className){
+			for(Bloczek b:lista){
+				if(b.getClass() == className){
+					b.setSelected(false);
+					b.DeHighlight();
+				}
+			}
+		}
+		/**
+		 * usuwa wszystkie zaznaczone bloczki z listy bloczków
+		 * @param listaBloczkuf
+		 */
+		public static void deleteSelectedBlocks(List<Bloczek> listaBloczkuf){
+			List<Bloczek> toRemove = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
+			listaBloczkuf.removeAll(toRemove);
 		}
 		
 		

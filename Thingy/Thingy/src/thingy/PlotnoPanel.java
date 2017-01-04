@@ -1,12 +1,17 @@
 package thingy;
 
+import java.awt.BasicStroke;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.Stroke;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -15,19 +20,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.AbstractAction;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.KeyStroke;
+
+import thingy.*;
 
 
-public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionListener{
+public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMotionListener{
 	private BufferedImage area;
 	Bloczek selectedBlock;
-	private boolean isDragged;
-	private boolean editMode;
+	public Boolean isDragged;
+	public Boolean blockDragMode;
 	private boolean lineDrawingMode;
+	private boolean selectingMode;
 	public Point mousexy;
 	public Point mouseStart;
 	List<Bloczek> listaBloczkuf;
@@ -39,21 +54,33 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 		LINE, SELECT
 	}
 	public DrawingMode drawMode;
-	
+	boolean isDrawingLine = false;
 
 	Boolean pressed;
 	Point point;
 
+	Graphics2D g;
+	
 	Graphics bufG; 
 	Image bufI;
 	
-	public PlotnoPanel(BufferedImage image, List<Bloczek> listaBloczkuf, Bloczek selectedBloczek, DrawingMode mode){
-		area = image;
+	public PlotnoPanel(List<Bloczek> listaBloczkuf, Bloczek selectedBloczek){
+		area = new BufferedImage(640,480,BufferedImage.TYPE_INT_RGB);
+		
+		//pobranie obiektu Graphics z bitmapy i wyczysczenie 
+		g = area.createGraphics();
+		g.setColor(Color.white);
+		g.fillRect(0, 0, area.getWidth(), area.getHeight());
 		point = new Point(0,0);
 		pressed = false;
+		setFocusable(true);
 		selectedBlock = selectedBloczek;
 		this.listaBloczkuf = listaBloczkuf;
-		drawMode = mode;
+		drawMode = DrawingMode.LINE;
+		isDragged = false;
+		blockDragMode = false;
+		
+		
 		//popup
 				popupMenu = new JPopupMenu();
 				
@@ -66,9 +93,18 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 				
 		addMouseListener(this);
 		addMouseMotionListener(this);
-			
+		
+		getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "delete");
+		getActionMap().put("delete", DeleteAction);
+		
+		JLabel x = new JLabel();
+		x.setIcon(new ImageIcon(area));
+		x.setBounds(0, 0,1, 1);
+		setViewportView(x);	
+		
+		
 	}
-	
+
 	@Override
 	public void paintComponent(Graphics g){
 		
@@ -77,12 +113,11 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
           bufI = createImage( getWidth(), getHeight() );
           bufG = bufI.getGraphics();
 	 	}
-		
+		paintBloczki();
 		bufG.drawImage(area, 0, 0, null);
 		g.drawImage(bufI, 0, 0, null);
 		
 	}
-	
 	
 	
 	public Boolean getPressed() {
@@ -101,14 +136,22 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 		return isDragged;
 	}
 	
-	public boolean isEditMode() {
-		return editMode;
+	public boolean isBlockDragMode() {
+		return blockDragMode;
 	}
 
-	public void setEditMode(boolean editMode) {
-		this.editMode = editMode;
+	public void setBlockDragMode(boolean Mode) {
+		this.blockDragMode = Mode;
 	}
-	
+
+	public boolean isInSelectingMode() {
+		return selectingMode;
+	}
+
+	public void setSelectingMode(boolean selectingMode) {
+		this.selectingMode = selectingMode;
+	}
+
 	public boolean isLineDrawingMode() {
 		return lineDrawingMode;
 	}
@@ -117,11 +160,11 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 		this.lineDrawingMode = lineDrawingMode;
 	}
 	
+	
+	
 	AbstractAction DeleteAction = new AbstractAction(){
 		public synchronized void actionPerformed(ActionEvent arg0) {
-			List<Bloczek> toRemove = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
-			listaBloczkuf.removeAll(toRemove);
-			
+			Bloczek.BloczekListMethods.deleteSelectedBlocks(listaBloczkuf);
 		}
 	};
 	
@@ -134,26 +177,56 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 	
 	
 	public void paintBloczki(){
-		bufG.setColor(Color.white);
-		bufG.fillRect(0, 0, area.getWidth(), area.getHeight());
+		g.setColor(Color.white);
+		g.fillRect(0, 0, area.getWidth(), area.getHeight());
 		
-		
+		//bloczki
 		for (Bloczek b: listaBloczkuf){
-			bufG.setColor(b.getColor());
-			bufG.fillRect(b.getX(), b.getY(), b.getWidth(), b.getHeight());
+			g.setStroke(new BasicStroke(1));
+			if(b instanceof Line){
+				g.setColor(Color.BLACK);
+				g.setStroke(new BasicStroke(((Line) b).getLineSize()));
+				g.drawLine(b.getX()+3, b.getY()+3, b.getX()+b.getWidth()-3, b.getY()+b.getHeight()-3);
+
+			}
+			else if (b instanceof TestBloczek){
+				g.setColor(b.getColor());
+				g.drawImage(b.getImage(), b.getX(), b.getY(), null);
+				g.drawRect(b.getX(), b.getY(), b.getWidth(), b.getHeight());
+			}
+			g.setStroke(new BasicStroke(1));
+			for(Pin p: b.pinList){
+				if(p.getStyle() == Pin.pinStyle.SQUARE){
+					g.setColor(p.getColor());
+					g.fillRect(p.getX(), p.getY(), p.getWidth(), p.getHeight());
+					g.setColor(Color.BLACK);
+					g.drawRect(p.getX(), p.getY(), p.getWidth(), p.getHeight());
+				}
+				else if (p.getStyle() == Pin.pinStyle.LINE){
+					g.setColor(Color.BLACK);
+					g.drawLine(p.getX(), p.getY(), p.getX()+p.getWidth(), p.getY()+p.getHeight());
+					g.drawLine(p.getX(), p.getY()+p.getHeight(), p.getX()+p.getWidth(), p.getY());
+				}
+			}
 		}
+		
+		
+		//podpisy
 		for(Bloczek b: listaBloczkuf){
-			bufG.setColor(Color.BLACK);
-			bufG.drawString(b.getName(), b.getX(), b.getY()+b.getHeight()+12);
+			if((b instanceof FuncBlock)){
+				
+				g.setColor(Color.BLACK);
+				g.drawString(b.getName(), b.getX(), b.getY()+b.getHeight()+12);
+			}
 		}
 		
 		DrawingHandler();
 	}
 	
 	void DrawingHandler(){
-		if(isDragged() && !isEditMode()){
-			setLineDrawingMode(true);
-			bufG.setColor(Color.black);
+		g.setStroke(new BasicStroke(1));
+		if(isDragged() && isInSelectingMode()){
+			g.setColor(Color.black);
 			
 			if(drawMode == DrawingMode.SELECT){
 				Rectangle selection = new Rectangle();
@@ -166,7 +239,7 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 				else if(mouseStart.x > mousexy.x && mouseStart.y > mousexy.y)
 					selection.setBounds(mousexy.x, mousexy.y, mouseStart.x-mousexy.x, mouseStart.y-mousexy.y);
 				
-				bufG.drawRect(selection.x, selection.y, selection.width, selection.height);
+				g.drawRect(selection.x, selection.y, selection.width, selection.height);
 				for(Bloczek b : listaBloczkuf){
 					if(selection.contains( new Point((b.getX() + b.getWidth()/2), (b.getY() + b.getHeight()/2)) )){
 							
@@ -179,11 +252,13 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 					}
 				}
 			}
-			else if(drawMode == DrawingMode.LINE){
-				bufG.drawLine(mouseStart.x, mouseStart.y, mousexy.x, mousexy.y);
-			}
 		}
-		else ;
+		else if (drawMode == DrawingMode.LINE && isLineDrawingMode()){
+			if(Math.abs(mouseStart.y - mousexy.y) < Math.abs(mouseStart.x - mousexy.x))
+				g.drawLine(mouseStart.x, mouseStart.y, mousexy.x, mouseStart.y);
+			else
+				g.drawLine(mouseStart.x, mouseStart.y, mouseStart.x, mousexy.y);
+		}
 	}
 	
 	
@@ -195,9 +270,11 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 	public void mouseDragged(MouseEvent arg0) {
 		this.setDragged(true);
 		mousexy = arg0.getPoint();
-		if(!this.isLineDrawingMode()){
+		Bloczek checkBlok = Bloczek.BloczekListMethods.getBlockUnderMouse(listaBloczkuf);
+		if(checkBlok == null && drawMode == DrawingMode.SELECT) setSelectingMode(true);
+		if(!this.isLineDrawingMode() && !this.isInSelectingMode()){
 			if(pressedButton == MouseEvent.BUTTON1) this.setDragged(true);
-			//stworzenie boundig boxa zaw wszystkie zaznaczone bloczki
+			//stworzenie bounding boxa zaw wszystkie zaznaczone bloczki
 				List<Bloczek> selectedList = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
 				if(boundingBox == null) {
 					boundingBox = Bloczek.BloczekListMethods.createBoundingBox(selectedList);
@@ -211,18 +288,18 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 				for(Bloczek b : selectedList){
 					if(this.isDragged())
 						{
-								this.setEditMode(true);	//tryb modyfikowania bloczkow
+								this.setBlockDragMode(true);	//tryb modyfikowania bloczkow
 								if(areaSize.contains(boundingBox)){
 									synchronized(this){
-											//ustaw bloczek w tryb przeciągania
+											//ustaw bloczek w tryb przeciągania i zmien pozycje bloczka
 											b.setDragged(true);	
-											b.setX(b.getStartPos().x + mousexy.x - mouseStart.x);		//zmień pozycję bloczka
+											b.setX(b.getStartPos().x + mousexy.x - mouseStart.x);		
 											b.setY(b.getStartPos().y + mousexy.y - mouseStart.y);
 										
 									}
 									//g.setColor(Color.BLACK);
 									//g.drawRect(boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
-									//canvas.repaint();
+									//canvas.repaint(); (wysw bboxa)
 									b.Highlight();
 								}
 								else{
@@ -233,12 +310,16 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 					}
 			}
 		}
+		else{
+			if(this.isLineDrawingMode()) isDrawingLine = true;
+		}
 	}
 
 	@Override
 	public void mouseMoved(MouseEvent arg0) {
 		mousexy = arg0.getPoint();
 		
+		//ust. flagi MouseIn dla kazdego bloczka
 		for(Bloczek b : listaBloczkuf){
 		if(mousexy.x > b.getX() && mousexy.y > b.getY() && mousexy.x < b.getX() + b.getWidth() && mousexy.y < b.getY() + b.getHeight() && !this.isLineDrawingMode()){ //jesli kursor jest na bloczku
 			b.Highlight();	//podświetl bloczek
@@ -255,8 +336,18 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
-		// TODO Auto-generated method stub
-		
+		List<Bloczek> selectedList = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
+		Bloczek.BloczekListMethods.deselectAll(listaBloczkuf);	
+		for(Bloczek b : listaBloczkuf){
+			
+			if(b.isMouseIn()){
+				b.setSelected(true);
+				b.Highlight();
+				break;
+			}
+			//iloscLabel.setText("kliknieto lewy na "+ b.getName());
+			
+		}
 	}
 
 	@Override
@@ -276,15 +367,14 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 		mouseStart = arg0.getPoint();
 		pressedButton = arg0.getButton();
 		List<Bloczek> selectedList = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
-		if(Bloczek.BloczekListMethods.getBlockUnderMouse(listaBloczkuf) == null){
-			this.setEditMode(false);
-			//iloscLabel.setText("Nic nie kliknieto");
+		if( Bloczek.BloczekListMethods.getBlockUnderMouse(listaBloczkuf) instanceof Pin){
+			this.setBlockDragMode(false);
+			setLineDrawingMode(true);
 		}
 		
 		for(Bloczek b : listaBloczkuf){
 			if(b.isMouseIn() && arg0.getButton() == MouseEvent.BUTTON3)			//kliknieto prawy przycisk myszy na bloczek
 			{
-				
 				if(Bloczek.BloczekListMethods.getBlockUnderMouse(selectedList) == null) Bloczek.BloczekListMethods.deselectAll(selectedList);	//jesli nie nacisnieto na wczesniej zaznaczony bloczek, odznacz wszystkie zaznaczone bloczki
 				b.setSelected(true);
 				b.Highlight();
@@ -301,7 +391,7 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 				//iloscLabel.setText("kliknieto lewy na "+ b.getName());
 				break;
 			}
-			else{					//jesli kliknieto w puste niejsce
+			else{																//jesli kliknieto w puste niejsce
 				if(Bloczek.BloczekListMethods.getBlockUnderMouse(listaBloczkuf) == null){
 					b.setSelected(false);
 					b.DeHighlight();
@@ -316,10 +406,11 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 	@Override
 	public void mouseReleased(MouseEvent arg0) {
 		if(this.isDragged()) this.setDragged(false);
-		if(this.isEditMode()) this.setEditMode(false);
-		if(this.isLineDrawingMode()) this.setLineDrawingMode(false);
+		if(this.isBlockDragMode()) this.setBlockDragMode(false);
+		if(this.isInSelectingMode()) this.setSelectingMode(false);
 		if(!(boundingBox == null)) boundingBox = null;
 		if(!(BBoxStartPos == null)) BBoxStartPos = null;
+		
 		for(Bloczek b : listaBloczkuf){
 			//if(b.isDragged())
 				//b.setSelected(false);
@@ -328,8 +419,22 @@ public class PlotnoPanel extends JPanel implements MouseListener, MouseMotionLis
 			b.setStartPos(b.getX(), b.getY());
 			
 		}
+		if(drawMode == DrawingMode.LINE && this.isDrawingLine && this.isLineDrawingMode()){
+			Bloczek.BloczekListMethods.deselectAll(listaBloczkuf);
+			
+				if(Math.abs(mouseStart.y - mousexy.y) < Math.abs(mouseStart.x - mousexy.x))
+					new Line(this.getSize(),mouseStart.x, mouseStart.y, mousexy.x, mouseStart.y, listaBloczkuf).setSelected(true);
+				else
+					new Line(this.getSize(),mouseStart.x, mouseStart.y, mouseStart.x, mousexy.y, listaBloczkuf).setSelected(true);
+			
+			
+			
+		}
+		if(this.isLineDrawingMode()) this.setLineDrawingMode(false);
+		if(this.isDrawingLine) isDrawingLine = false;
 		
 	}
+
 
 
 }

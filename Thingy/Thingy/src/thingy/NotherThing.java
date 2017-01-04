@@ -18,6 +18,8 @@ import java.awt.Rectangle;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +46,8 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.JToolBar;
 
 public class NotherThing extends JFrame implements ComponentListener{
 
@@ -54,12 +58,8 @@ public class NotherThing extends JFrame implements ComponentListener{
 	private JToggleButton tglbtnLine;
 	private JToggleButton tglbtnSelect;
 	Bloczek selectedBlock;		//do przekazania bloczka do okna wlasciwosci
-	thingy.PlotnoPanel.DrawingMode mode;
 	PlotnoPanel canvas;
-	BufferedImage area;
-	Graphics g;
-	Point mousexy;
-	Point mouseStart;
+
 	List<Bloczek> listaBloczkuf = new ArrayList<Bloczek>();
 	
 	JMenuBar menuBar;
@@ -101,7 +101,6 @@ public class NotherThing extends JFrame implements ComponentListener{
 			}
 		
 			
-		
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 866, 704);
 		
@@ -113,6 +112,14 @@ public class NotherThing extends JFrame implements ComponentListener{
 		
 		mntmZapisz = new JMenuItem("Zapisz");
 		mntmZapisz.addActionListener(SaveAction);
+		
+		mntmDebug = new JMenuItem("Debug");
+		mntmDebug.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				new List_debug(listaBloczkuf);
+			}
+		});
+		mnPlik.add(mntmDebug);
 		mnPlik.add(mntmZapisz);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -127,62 +134,42 @@ public class NotherThing extends JFrame implements ComponentListener{
 		btnNewButton.addActionListener(addButtonAction);
 		panel.add(btnNewButton);
 		
-		//ustaw tryb plotna na rysowanie linii
-		mode = PlotnoPanel.DrawingMode.LINE;
+		toolBar = new JToolBar();
+		panel.add(toolBar);
+		
 		
 		tglbtnLine = new JToggleButton("Line");
+		toolBar.add(tglbtnLine);
 		tglbtnLine.addActionListener(LineModeAction);
 		tglbtnLine.setSelected(true);
-		panel.add(tglbtnLine);
 		
 		tglbtnSelect = new JToggleButton("Select");
+		toolBar.add(tglbtnSelect);
 		tglbtnSelect.addActionListener(SelectModeAction);
-		panel.add(tglbtnSelect);
 		
 		iloscLabel= new JLabel("ILOSC:");
 		panel.add(iloscLabel);
 		
-		//stworz bitmape
-		area = new BufferedImage(640,480,BufferedImage.TYPE_INT_RGB);
-						
-		//pobranie obiektu Graphics z bitmapy i wyczysczenie 
-		g = area.getGraphics();
-		g.setColor(Color.white);
-		g.fillRect(0, 0, area.getWidth(), area.getHeight());
+		panel_1 = new JPanel();
+		contentPane.add(panel_1, BorderLayout.CENTER);
+		panel_1.setLayout(null);
 		
-		//tworznie scrollPane do plotna
+
 		
 		//tworzenie obiektu płotna, na ktorym wyswietlona bedzie bitmapa
-		canvas = new PlotnoPanel(area, listaBloczkuf, selectedBlock, mode);
-		canvas.setSize(area.getWidth(), area.getHeight());
-		canvas.repaint();
+		canvas = new PlotnoPanel(listaBloczkuf, selectedBlock);
+		canvas.setBounds(0, 0, 642, 482);
+		panel_1.add(canvas);
+		canvas.setDoubleBuffered(true);
+		canvas.setAlignmentX(Component.LEFT_ALIGNMENT);
+		canvas.setAlignmentY(Component.TOP_ALIGNMENT);
+		//canvas.setSize(area.getWidth(), area.getHeight());
 		//odswiez plotno
 		canvas.repaint();
-		JScrollPane scrollPane = new JScrollPane(canvas);
-		contentPane.add(scrollPane, BorderLayout.CENTER);
 		
 		//uruchom wątek odswiezajacy plotno
 		Thread mouseThread = new Thread(mouseRunnable);
 		mouseThread.start();
-	}
-	
-	
-	public void paintBloczki(){
-		g.setColor(Color.white);
-		g.fillRect(0, 0, area.getWidth(), area.getHeight());
-		
-		
-		for (Bloczek b: listaBloczkuf){
-			g.setColor(b.getColor());
-			g.fillRect(b.getX(), b.getY(), b.getWidth(), b.getHeight());
-		}
-		for(Bloczek b: listaBloczkuf){
-			g.setColor(Color.BLACK);
-			g.drawString(b.getName(), b.getX(), b.getY()+b.getHeight()+12);
-		}
-		
-		DrawingHandler();
-		canvas.repaint();
 	}
 	
 	//Wątek odswiezający płótno
@@ -193,8 +180,9 @@ public class NotherThing extends JFrame implements ComponentListener{
 		public synchronized void run() {
 			
 			while(true){
-			paintBloczki();
 			canvas.repaint();
+			if(canvas != null)
+				iloscLabel.setText("isDragged = " + canvas.isDragged.toString() + ", blockDragMode = " + canvas.blockDragMode.toString() + ", linedrawingMode= " + Boolean.toString(canvas.isLineDrawingMode()) + ", isdrawingLine = " + Boolean.toString(canvas.isDrawingLine));
 			try {
 				Thread.sleep(10);
 			} catch (InterruptedException e) {
@@ -208,47 +196,6 @@ public class NotherThing extends JFrame implements ComponentListener{
 		}
 		
 	};
-	
-
-
-	void DrawingHandler(){
-		if(canvas.isDragged() && !canvas.isEditMode()){
-			canvas.setLineDrawingMode(true);
-			g.setColor(Color.black);
-			
-			mouseStart = canvas.mouseStart;
-			mousexy = canvas.mousexy;
-			
-			if(mode == PlotnoPanel.DrawingMode.SELECT){
-				Rectangle selection = new Rectangle();
-				if(mouseStart.x <= mousexy.x && mouseStart.y <= mousexy.y)
-					selection.setBounds(mouseStart.x, mouseStart.y, mousexy.x-mouseStart.x, mousexy.y-mouseStart.y);
-				else if(mouseStart.x > mousexy.x && mouseStart.y <= mousexy.y)
-					selection.setBounds(mousexy.x, mouseStart.y, mouseStart.x-mousexy.x, mousexy.y-mouseStart.y);
-				else if(mouseStart.x <= mousexy.x && mouseStart.y > mousexy.y)
-					selection.setBounds(mouseStart.x, mousexy.y, mousexy.x-mouseStart.x, mouseStart.y-mousexy.y);
-				else if(mouseStart.x > mousexy.x && mouseStart.y > mousexy.y)
-					selection.setBounds(mousexy.x, mousexy.y, mouseStart.x-mousexy.x, mouseStart.y-mousexy.y);
-				
-				g.drawRect(selection.x, selection.y, selection.width, selection.height);
-				for(Bloczek b : listaBloczkuf){
-					if(selection.contains( new Point((b.getX() + b.getWidth()/2), (b.getY() + b.getHeight()/2)) )){
-							
-							b.setSelected(true);
-							b.Highlight();
-					}
-					else{
-						b.setSelected(false);
-						b.DeHighlight();
-					}
-				}
-			}
-			else if(mode == PlotnoPanel.DrawingMode.LINE){
-				g.drawLine(mouseStart.x, mouseStart.y, mousexy.x, mousexy.y);
-			}
-		}
-		else ;
-	}
 
 	
 	//-----------------------ACTIONS-----------------------------
@@ -262,7 +209,7 @@ public class NotherThing extends JFrame implements ComponentListener{
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			mode = PlotnoPanel.DrawingMode.LINE;
+			canvas.drawMode = PlotnoPanel.DrawingMode.LINE;
 			tglbtnLine.setSelected(true);
 			tglbtnSelect.setSelected(false);
 			
@@ -277,7 +224,7 @@ public class NotherThing extends JFrame implements ComponentListener{
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			mode = PlotnoPanel.DrawingMode.SELECT;
+			canvas.drawMode = PlotnoPanel.DrawingMode.SELECT;
 			tglbtnLine.setSelected(false);
 			tglbtnSelect.setSelected(true);
 			
@@ -290,9 +237,9 @@ public class NotherThing extends JFrame implements ComponentListener{
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			listaBloczkuf.add(new Bloczek(canvas.getSize()));
-			paintBloczki();
-			iloscLabel.setText("ILOSC: " + Bloczek.iloscBloczkuf + " a w liscie do cholery jest: " + listaBloczkuf.size());
+			new TestBloczek(canvas.getSize(), listaBloczkuf, 1, 5);
+			//paintBloczki();
+			iloscLabel.setText("w liscie do cholery jest: " + listaBloczkuf.size());
 			
 		}
 		
@@ -307,6 +254,9 @@ public class NotherThing extends JFrame implements ComponentListener{
 			
 		}
 	};
+	private JPanel panel_1;
+	private JToolBar toolBar;
+	private JMenuItem mntmDebug;
 	
 	//-----------------------------------------EVENTS----------------------------------------------------
 
@@ -333,4 +283,5 @@ public class NotherThing extends JFrame implements ComponentListener{
 		// TODO Auto-generated method stub
 		
 	}
+
 }
