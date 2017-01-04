@@ -191,7 +191,7 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 			}
 			else if (b instanceof TestBloczek){
 				g.setColor(b.getColor());
-				g.drawImage(b.getImage(), b.getX(), b.getY(), null);
+				g.drawImage(((FuncBlock) b).getImage(), b.getX(), b.getY(), null);
 				g.drawRect(b.getX(), b.getY(), b.getWidth(), b.getHeight());
 			}
 			g.setStroke(new BasicStroke(1));
@@ -222,9 +222,12 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 		
 		DrawingHandler();
 	}
+	//rysowanie cz. dalsza :D
 	
+
 	void DrawingHandler(){
 		g.setStroke(new BasicStroke(1));
+		//rysowanie zaznaczenia
 		if(isDragged() && isInSelectingMode()){
 			g.setColor(Color.black);
 			
@@ -240,7 +243,9 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 					selection.setBounds(mousexy.x, mousexy.y, mouseStart.x-mousexy.x, mouseStart.y-mousexy.y);
 				
 				g.drawRect(selection.x, selection.y, selection.width, selection.height);
+				//wykrywanie bloczków, które znajdują sie w polu zaznaczenia
 				for(Bloczek b : listaBloczkuf){
+					//bloczek jest zaznaczony, jeśli jego srodek znajduje się w prostokacie zaznaczenia
 					if(selection.contains( new Point((b.getX() + b.getWidth()/2), (b.getY() + b.getHeight()/2)) )){
 							
 							b.setSelected(true);
@@ -268,11 +273,16 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 
 	@Override
 	public void mouseDragged(MouseEvent arg0) {
+		//przeciąganie
+		//ustaw flagę
 		this.setDragged(true);
 		mousexy = arg0.getPoint();
+		//pobierz obiekt bloczka od myszą
 		Bloczek checkBlok = Bloczek.BloczekListMethods.getBlockUnderMouse(listaBloczkuf);
+		//jeśli mysz nie znajduje się nad żadnym obiektem i  włącz tryb zaznaczania, ustaw flagę zazn
 		if(checkBlok == null && drawMode == DrawingMode.SELECT) setSelectingMode(true);
 		if(!this.isLineDrawingMode() && !this.isInSelectingMode()){
+			//jeśli wcisnieto lpm
 			if(pressedButton == MouseEvent.BUTTON1) this.setDragged(true);
 			//stworzenie bounding boxa zaw wszystkie zaznaczone bloczki
 				List<Bloczek> selectedList = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
@@ -282,6 +292,7 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 				}
 			
 			if(boundingBox != null){
+				//ust. pozycji bboxa
 				boundingBox.setLocation(BBoxStartPos.x + mousexy.x - mouseStart.x, BBoxStartPos.y + mousexy.y - mouseStart.y);
 				Rectangle areaSize = new Rectangle(0,0,area.getWidth(), area.getHeight());
 				
@@ -289,7 +300,7 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 					if(this.isDragged())
 						{
 								this.setBlockDragMode(true);	//tryb modyfikowania bloczkow
-								if(areaSize.contains(boundingBox)){
+								if(areaSize.contains(boundingBox)){	//zmieniaj pozycje bloczków tylko jesli bounding box mieści sie w obszarze roboczym
 									synchronized(this){
 											//ustaw bloczek w tryb przeciągania i zmien pozycje bloczka
 											b.setDragged(true);	
@@ -304,6 +315,7 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 								}
 								else{
 									b.setDragged(true);	
+									//jeśli bounding box nie miesci sie w obszarze roboczym,zmieniaj pozycje bounding boxa, ale nie zmieniaj pozycji bloczków
 									boundingBox.setLocation(BBoxStartPos.x + mousexy.x - mouseStart.x, BBoxStartPos.y + mousexy.y - mouseStart.y);
 								}
 						}
@@ -319,14 +331,15 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 	public void mouseMoved(MouseEvent arg0) {
 		mousexy = arg0.getPoint();
 		
-		//ust. flagi MouseIn dla kazdego bloczka
+		//ust. flagi MouseIn dla kazdego bloczka po najechaniu na niego myszą
 		for(Bloczek b : listaBloczkuf){
 		if(mousexy.x > b.getX() && mousexy.y > b.getY() && mousexy.x < b.getX() + b.getWidth() && mousexy.y < b.getY() + b.getHeight() && !this.isLineDrawingMode()){ //jesli kursor jest na bloczku
 			b.Highlight();	//podświetl bloczek
 			b.setMouseIn(true);
 		}
 		else {
-			b.DeHighlight();			//jesli kursor nie jest na bloczku, wyłącz podświetlenie
+			//jesli kursor nie jest na bloczku, wyłącz podświetlenie
+			b.DeHighlight();			
 			b.setMouseIn(false);
 		}
 		
@@ -336,7 +349,7 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
-		List<Bloczek> selectedList = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
+		//po kliknięciu myszą, zaznaczany jest pojedynczy bloczek
 		Bloczek.BloczekListMethods.deselectAll(listaBloczkuf);	
 		for(Bloczek b : listaBloczkuf){
 			
@@ -365,33 +378,41 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 	@Override
 	public void mousePressed(MouseEvent arg0) {
 		mouseStart = arg0.getPoint();
-		pressedButton = arg0.getButton();
+		//pobierz liste obecnie zaznaczonych bloczków
 		List<Bloczek> selectedList = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
+		//jesli naciśnieto na pin, nie ustawiaj trybu przeciągania bloków
 		if( Bloczek.BloczekListMethods.getBlockUnderMouse(listaBloczkuf) instanceof Pin){
 			this.setBlockDragMode(false);
 			setLineDrawingMode(true);
 		}
-		
+		//dla kazdego obiektu:
 		for(Bloczek b : listaBloczkuf){
-			if(b.isMouseIn() && arg0.getButton() == MouseEvent.BUTTON3)			//kliknieto prawy przycisk myszy na bloczek
+			//jesli kliknieto prawy przycisk myszy na obiekt
+			if(b.isMouseIn() && arg0.getButton() == MouseEvent.BUTTON3)			
 			{
-				if(Bloczek.BloczekListMethods.getBlockUnderMouse(selectedList) == null) Bloczek.BloczekListMethods.deselectAll(selectedList);	//jesli nie nacisnieto na wczesniej zaznaczony bloczek, odznacz wszystkie zaznaczone bloczki
+				//jesli nie nacisnieto na wczesniej zaznaczony bloczek, odznacz wszystkie zaznaczone bloczki
+				if(Bloczek.BloczekListMethods.getBlockUnderMouse(selectedList) == null) Bloczek.BloczekListMethods.deselectAll(selectedList);	
+				//zaznacz bloczek
 				b.setSelected(true);
 				b.Highlight();
+				//ustaw bloczek jako zaznaczony TODO: selectedBlock(s) ma być listą, przyjmowac ma listę zazn blokow
 				selectedBlock = b;
+				//pokaz popup
 				popupMenu.show(arg0.getComponent(), arg0.getX(), arg0.getY());
-				//iloscLabel.setText("kliknieto prawym na "+ b.getName());
+				//wyjdz z petli
 				break;
 			}
-			else if(b.isMouseIn() && arg0.getButton() == MouseEvent.BUTTON1)	//kliknieto lewy przycisk myszki na bloczek
+			//kliknieto lewy przycisk myszki na obiekt
+			else if(b.isMouseIn() && arg0.getButton() == MouseEvent.BUTTON1)	
 			{
+				//funkcjonalnośc jw, tyle ze bez pokazywania popupa
 				if(Bloczek.BloczekListMethods.getBlockUnderMouse(selectedList) == null) Bloczek.BloczekListMethods.deselectAll(selectedList);	
 				b.setSelected(true);
 				selectedBlock = b;
-				//iloscLabel.setText("kliknieto lewy na "+ b.getName());
 				break;
 			}
-			else{																//jesli kliknieto w puste niejsce
+			//jesli kliknieto w puste niejsce jakimkolwiek przyciskiem, odzznacz bloczek i nie wychodz pętli
+			else{																
 				if(Bloczek.BloczekListMethods.getBlockUnderMouse(listaBloczkuf) == null){
 					b.setSelected(false);
 					b.DeHighlight();
@@ -405,12 +426,14 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 
 	@Override
 	public void mouseReleased(MouseEvent arg0) {
+		//po puszczeniu myszy, poszczególne flagi są ustawiane na wart. domyślną
 		if(this.isDragged()) this.setDragged(false);
 		if(this.isBlockDragMode()) this.setBlockDragMode(false);
 		if(this.isInSelectingMode()) this.setSelectingMode(false);
+		//bounding boxy sa czyszczone
 		if(!(boundingBox == null)) boundingBox = null;
 		if(!(BBoxStartPos == null)) BBoxStartPos = null;
-		
+		//ustalana jest pozycja startowa bloczków, używana przy przenoszeniu
 		for(Bloczek b : listaBloczkuf){
 			//if(b.isDragged())
 				//b.setSelected(false);
@@ -419,6 +442,7 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 			b.setStartPos(b.getX(), b.getY());
 			
 		}
+		// jesli rysowany był kabel, tworzony jest obiekt kabla i zerowane sa flagi
 		if(drawMode == DrawingMode.LINE && this.isDrawingLine && this.isLineDrawingMode()){
 			Bloczek.BloczekListMethods.deselectAll(listaBloczkuf);
 			

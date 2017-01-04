@@ -30,6 +30,7 @@ public class Bloczek {
 	 * StartPos - pozycja bloczka na poczatku przeciagania
 	 * width - szer
 	 * height - wysokosc
+	 * pinList - lista pinów posiadanych przez bloczek
 	 */
 	
 	
@@ -43,7 +44,7 @@ public class Bloczek {
 	protected boolean dragged;
 	protected boolean selected;
 	protected Point StartPos;
-	protected Image image;
+	
 	static int iloscBloczkuf = 0;
 	protected String ID;
 	protected int width;
@@ -63,13 +64,7 @@ public class Bloczek {
 		origColor = color;
 		dragged = false;
 		mouseIn = false;
-		File iconsrc = new File("img/def.png");
-		try {
-			image = ImageIO.read(iconsrc);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			image = new BufferedImage(50,30,BufferedImage.TYPE_INT_RGB);
-		}
+		
 		ID = "" + iloscBloczkuf;
 		iloscBloczkuf++;
 		list.add(this);
@@ -80,9 +75,7 @@ public class Bloczek {
 		return ID;
 	}
 
-	public Image getImage() {
-		return image;
-	}
+	
 
 
 
@@ -196,6 +189,9 @@ public class Bloczek {
 
 	public void setSelected(boolean selected) {
 		this.selected = selected;
+		for(Pin p: pinList){
+			p.setSelected(selected);
+		}
 	}
 	
 	@Override
@@ -293,12 +289,18 @@ public class Bloczek {
 			}
 		}
 		/**
-		 * usuwa wszystkie zaznaczone bloczki z listy bloczków
+		 * Usuwa wszystkie zaznaczone bloczki z listy bloczków
+		 * 
 		 * @param listaBloczkuf
 		 */
 		public static void deleteSelectedBlocks(List<Bloczek> listaBloczkuf){
 			List<Bloczek> toRemove = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
 			listaBloczkuf.removeAll(toRemove);
+			for(Bloczek b: listaBloczkuf){
+				for(Pin p: b.pinList){
+					p.setConnectedTo();
+				}
+			}
 		}
 		
 		

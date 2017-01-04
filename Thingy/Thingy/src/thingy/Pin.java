@@ -7,6 +7,22 @@ import java.awt.Rectangle;
 import java.util.List;
 
 public class Pin extends Bloczek{
+	/**
+	 * Pin - wysyła/odbiera wartośc logiczną
+	 * type - typ pinu; wejście, wyjście, wej/wyj, niekreślony
+	 * style - wygląd pinu na obszarze roboczym
+	 * 		>SQUARE - kwadrat
+	 * 		>LINE - uzywany do kabli, krzyżyk
+	 * 		>NOTVISIBLE - niewidoczny na obszarze roboczym
+	 * state - wartość logiczna
+	 * pinPosX, pinPosY - pozycja wzgledem rodzica
+	 * parent - rodzic pina
+	 * connectedTo - pin z którym nastąpiło połącznie
+	 * id - identyfikator
+	 * @author Bartek
+	 *
+	 */
+	
 	
 	enum pinType{
 		IN, OUT, INOUT, UNDEF
@@ -21,6 +37,7 @@ public class Pin extends Bloczek{
 	int pinPosX, pinPosY;
 	Bloczek parent;
 	Pin connectedTo;
+	int id;
 	
 	List<Bloczek> BlockList; //uzywany przy kazdorazowej zmianie pozycji pinu w celu sprawdzenia czy 
 	/**
@@ -32,6 +49,7 @@ public class Pin extends Bloczek{
 	 * @param type - typ pinu 
 	 * @param style - wygląd pinu
 	 * @param list - lista bloczków
+	 * @param id - identyfikator
 	 */
 	public Pin(Dimension cSize, Bloczek parent, int x, int y, pinType type, pinStyle style, List<Bloczek> list, int id){
 		super(cSize, list);
@@ -48,19 +66,23 @@ public class Pin extends Bloczek{
 		origColor = color;
 		dragged = false;
 		mouseIn = false;
-		image = null;
 		this.type = type;
 		this.style = style;
 		orgStyle = this.style;
 		state = false;
 		BlockList = list;
+		this.id = id;
+		setID();
 		setConnectedTo();
-		ID = parent.ID + "." + id + "-" + type;
 		parent.pinList.add(this);
 				
 	}
 	
-	private void setConnectedTo(){
+	private void setID(){
+		ID = parent.ID + "." + id + "-" + type;
+	}
+	//
+	public void setConnectedTo(){
 		Pin pin = checkForConnection(BlockList);
 		if(pin == null){
 			if(connectedTo != null){
@@ -74,7 +96,30 @@ public class Pin extends Bloczek{
 			
 		}
 	}
+	/**
+	 * łączy ten pin z innym, podanym pinem, zmieniany jest wygląd bloczka wskazujący na nawiązanie połączenia
+	 * @param p - pin do połączenia
+	 */
+	public void connectWith(Pin p){
+		connectedTo = p;
+		if(orgStyle == Pin.pinStyle.LINE) style = Pin.pinStyle.NOTVISIBLE;		
+		else if(orgStyle == Pin.pinStyle.SQUARE) this.setColor(Color.GRAY);
+		if(parent instanceof Line){
+			if(connectedTo.getType() == Pin.pinType.IN) setType(Pin.pinType.OUT);
+			else if (connectedTo.getType() == Pin.pinType.OUT) setType(Pin.pinType.IN);
+		}
+		
+	}
+	/**
+	 * rozłącza pin
+	 */
+	public void disconnect(){
+		connectedTo = null;
+		if(orgStyle == Pin.pinStyle.LINE) style = orgStyle;		
+		else if(orgStyle == Pin.pinStyle.SQUARE) this.setColor(Color.WHITE);
+	}
 	
+	//przy zmianie pozycji pinu, trzeba sprawdzić, czy nie nastąpiło przerwanie połączenia z wcześniej połaczonym pinem
 	@Override
 	public synchronized void setX(int x) {
 		if(x>=0 )
@@ -93,6 +138,17 @@ public class Pin extends Bloczek{
 		setConnectedTo();
 	}
 	
+	//wyłączenie podświetlenia przy najechaniu myszy
+	@Override
+	public void Highlight() {
+
+	}
+	@Override
+	public void DeHighlight() {
+
+	}
+
+	
 	public Bloczek getParent(){
 		return parent;
 	}
@@ -103,6 +159,7 @@ public class Pin extends Bloczek{
 	
 	public void setType(pinType t){
 		type = t;
+		setID(); 
 	}
 	
 	public pinStyle getStyle() {
@@ -113,19 +170,9 @@ public class Pin extends Bloczek{
 		this.style = style;
 	}
 	
-	public void connectWith(Pin p){
-		connectedTo = p;
-		this.x = connectedTo.getX();
-		this.y = connectedTo.getY();
-		if(orgStyle == Pin.pinStyle.LINE) style = Pin.pinStyle.NOTVISIBLE;		
-		else if(orgStyle == Pin.pinStyle.SQUARE) this.setOrigColor(Color.GRAY);
-	}
 	
-	public void disconnect(){
-		connectedTo = null;
-		if(orgStyle == Pin.pinStyle.LINE) style = orgStyle;		
-		else if(orgStyle == Pin.pinStyle.SQUARE) this.setOrigColor(Color.WHITE);
-	}
+	
+	
 	
 	public Pin getConnectedPin(){
 		return connectedTo;
@@ -148,7 +195,11 @@ public class Pin extends Bloczek{
 		}
 		return null;
 	}
-
+	/**
+	 * Działa jak thingy.Bloczek.BloczekListMethods.getBlockUnderMouse(List<Bloczek>), tyle że sprawdza tylko piny
+	 * @param pinList
+	 * @return
+	 */
 	public static Pin getSelectedPin(List<Pin> pinList){
 		for(Pin p : pinList){
 			if(p.isMouseIn()) return p;

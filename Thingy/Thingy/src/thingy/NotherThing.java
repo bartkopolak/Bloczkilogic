@@ -237,7 +237,7 @@ public class NotherThing extends JFrame implements ComponentListener{
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			new TestBloczek(canvas.getSize(), listaBloczkuf, 1, 5);
+			new TestBloczek(canvas.getSize(), listaBloczkuf, 2, 1);
 			//paintBloczki();
 			iloscLabel.setText("w liscie do cholery jest: " + listaBloczkuf.size());
 			
