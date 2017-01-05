@@ -14,28 +14,32 @@ public class FuncBlock extends Bloczek {
 
 	protected int inCount;
 	protected int outCount;
-	protected List<Line> in;
-	protected List<Line> out;
+	protected List<Pin> in;
+	protected List<Pin> out;
 	static int MINSIZE = 20;
 	protected Image image;
 	public FuncBlock(Dimension cSize, List<Bloczek> list, int inCount, int outCount) {
 		super(cSize, list);
-		
+		in = new ArrayList<Pin>();
+		out = new ArrayList<Pin>();
 		this.inCount = inCount;
 		this.outCount = outCount;
 		setPins(list);
-		File iconsrc = new File("img/def.png");
-		try {
-			image = ImageIO.read(iconsrc);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			image = new BufferedImage(50,30,BufferedImage.TYPE_INT_RGB);
-		}
+		
 		
 	}
 
 	public Image getImage() {
 		return image;
+	}
+	
+	public void setImage(String dest) {
+		File iconsrc = new File(dest);
+		try {
+			image = ImageIO.read(iconsrc);
+		} catch (IOException e) {
+			image = new BufferedImage(50,30,BufferedImage.TYPE_INT_RGB);
+		}
 	}
 	
 	@Override
@@ -74,11 +78,11 @@ public class FuncBlock extends Bloczek {
 			pinList.clear();
 		checkSize(Math.max(inCount, outCount));
 		for(int i = 0; i < inCount; i++){
-			new Pin(canvasSize, this, 0 ,10+i*10, Pin.pinType.IN, Pin.pinStyle.SQUARE, list,i+1);
+			in.add(new Pin(canvasSize, this, 0 ,10+i*10, Pin.pinType.IN, Pin.pinStyle.SQUARE, list,i+1));
 			
 		}
 		for(int i = 0; i < outCount; i++){
-			new Pin(canvasSize, this, this.width-6 ,10+i*10, Pin.pinType.OUT, Pin.pinStyle.SQUARE, list,i+1);
+			out.add(new Pin(canvasSize, this, this.width-6 ,10+i*10, Pin.pinType.OUT, Pin.pinStyle.SQUARE, list,i+1));
 		}
 		
 		
@@ -93,6 +97,7 @@ public class FuncBlock extends Bloczek {
 		else 
 			this.height = MINSIZE;
 	}
+	
 	
 	
 }

@@ -34,6 +34,7 @@ import javax.swing.JScrollPane;
 import javax.swing.KeyStroke;
 
 import thingy.*;
+import thingy.blocks.TestBloczek;
 
 
 public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMotionListener{
@@ -189,7 +190,7 @@ public class PlotnoPanel extends JScrollPane implements MouseListener, MouseMoti
 				g.drawLine(b.getX()+3, b.getY()+3, b.getX()+b.getWidth()-3, b.getY()+b.getHeight()-3);
 
 			}
-			else if (b instanceof TestBloczek){
+			else if (b instanceof FuncBlock){
 				g.setColor(b.getColor());
 				g.drawImage(((FuncBlock) b).getImage(), b.getX(), b.getY(), null);
 				g.drawRect(b.getX(), b.getY(), b.getWidth(), b.getHeight());

@@ -295,6 +295,11 @@ public class Bloczek {
 		 */
 		public static void deleteSelectedBlocks(List<Bloczek> listaBloczkuf){
 			List<Bloczek> toRemove = Bloczek.BloczekListMethods.createSelectedBlocksList(listaBloczkuf);
+			List<Pin> PinstoRemove = new ArrayList<Pin>();
+			for(Bloczek b : toRemove){
+				PinstoRemove.addAll(b.pinList);
+			}
+			toRemove.addAll(PinstoRemove);
 			listaBloczkuf.removeAll(toRemove);
 			for(Bloczek b: listaBloczkuf){
 				for(Pin p: b.pinList){

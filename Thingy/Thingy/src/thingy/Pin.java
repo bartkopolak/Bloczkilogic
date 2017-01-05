@@ -34,6 +34,8 @@ public class Pin extends Bloczek{
 	pinStyle style;
 	pinStyle orgStyle;
 	Boolean state;
+	
+
 	int pinPosX, pinPosY;
 	Bloczek parent;
 	Pin connectedTo;
@@ -168,6 +170,13 @@ public class Pin extends Bloczek{
 
 	public void setStyle(pinStyle style) {
 		this.style = style;
+	}
+	public Boolean getState() {
+		return state;
+	}
+
+	public void setState(Boolean state) {
+		this.state = state;
 	}
 	
 	

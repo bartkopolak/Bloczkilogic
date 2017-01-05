@@ -8,6 +8,9 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 
 import thingy.Plotno.DrawingMode;
+import thingy.blocks.Lamp;
+import thingy.blocks.TestBloczek;
+import thingy.blocks.VCC;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
@@ -134,6 +137,14 @@ public class NotherThing extends JFrame implements ComponentListener{
 		btnNewButton.addActionListener(addButtonAction);
 		panel.add(btnNewButton);
 		
+		btnVcc = new JButton("VCC");
+		btnVcc.addActionListener(addButtonAction2);
+		panel.add(btnVcc);
+		
+		btnLamp = new JButton("Lamp");
+		btnLamp.addActionListener(addButtonAction3);
+		panel.add(btnLamp);
+		
 		toolBar = new JToolBar();
 		panel.add(toolBar);
 		
@@ -237,10 +248,29 @@ public class NotherThing extends JFrame implements ComponentListener{
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
-			new TestBloczek(canvas.getSize(), listaBloczkuf, 2, 1);
-			//paintBloczki();
-			iloscLabel.setText("w liscie do cholery jest: " + listaBloczkuf.size());
-			
+			new TestBloczek(canvas.getSize(), listaBloczkuf, 2);
+		}
+		
+	};
+	
+	AbstractAction addButtonAction2 = new AbstractAction(){
+
+		private static final long serialVersionUID = 2L;
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			new VCC(canvas.getSize(), listaBloczkuf);
+		}
+		
+	};
+	
+	AbstractAction addButtonAction3 = new AbstractAction(){
+
+		private static final long serialVersionUID = 2L;
+
+		@Override
+		public void actionPerformed(ActionEvent arg0) {
+			new Lamp(canvas.getSize(), listaBloczkuf);
 		}
 		
 	};
@@ -257,6 +287,8 @@ public class NotherThing extends JFrame implements ComponentListener{
 	private JPanel panel_1;
 	private JToolBar toolBar;
 	private JMenuItem mntmDebug;
+	private JButton btnVcc;
+	private JButton btnLamp;
 	
 	//-----------------------------------------EVENTS----------------------------------------------------
 
